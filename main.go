@@ -90,10 +90,9 @@ func createServer() *http.Server {
 }
 
 func main() {
-	err := godotenv.Load()
-	if err != nil {
-		log.Fatal("Error loading .env file")
-	}
+	// load env vars from .env file if exists, else rely on system vars or defaults
+	godotenv.Load()
+
 	// Log setup values
 	logSetup()
 

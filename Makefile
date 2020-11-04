@@ -23,7 +23,7 @@ LDFLAGS = -ldflags "-X main.VERSION=${VERSION} -X main.COMMIT=${COMMIT} -X main.
 # Build the project
 all: clean test vet fmt linux darwin windows
 
-build: clean vet
+build: deps clean
 build:
 ifeq ($(OS),Windows_NT)
 	make windows
@@ -32,6 +32,9 @@ else ifeq ($(UNAME),Darwin)
 else ifeq ($(UNAME),Linux)
 	make linux
 endif
+
+deps:
+	go get
 
 run:
 	go run -race .
@@ -64,7 +67,7 @@ test:
 	go test -race -v ./...
 
 vet:
-	go vet ./... > ${VET_REPORT} 2>&1
+	go vet ./...
 
 fmt:
 	go fmt $$(go list ./... | grep -v /vendor/)
