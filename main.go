@@ -36,7 +36,7 @@ func shouldUseTLS() bool {
 
 // Log the typeform payload and redirect url
 func logRequestPayload(proxyUrl string, req *http.Request) {
-	log.Printf("Origin: %s | Path: %s\n", proxyUrl, req.URL.String())
+	log.Printf("Origin: %s | Path: %s | Headers: %#v\n", proxyUrl, req.URL.String(), req.Header)
 }
 
 // Log the env variables required for a reverse proxy
