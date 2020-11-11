@@ -6,7 +6,7 @@ RUN \
   apk update \
   && apk add --no-cache make wget curl gnupg git
 
-WORKDIR /go/src/go-secure-proxy
+WORKDIR /go/src/go-http-proxy
 COPY . .
 
 RUN make build
@@ -14,6 +14,6 @@ RUN make build
 FROM alpine:latest
 
 WORKDIR /tmp/
-COPY --from=builder /go/src/go-secure-proxy/bin/go-secure-proxy-linux-amd64 /tmp/
+COPY --from=builder /go/src/go-http-proxy/bin/go-http-proxy-linux-amd64 /tmp/
 
-CMD ["/tmp/go-secure-proxy-linux-amd64"]
+CMD ["/tmp/go-http-proxy-linux-amd64"]

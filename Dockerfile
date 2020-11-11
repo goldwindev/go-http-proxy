@@ -14,7 +14,7 @@ RUN go get -u github.com/go-delve/delve/cmd/dlv
 
 RUN npm i -g nodemon
 
-WORKDIR /go/src/go-secure-proxy
+WORKDIR /go/src/go-http-proxy
 COPY . .
 
 CMD ["/usr/bin/make", "watch"]

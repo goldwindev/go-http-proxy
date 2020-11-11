@@ -1,4 +1,4 @@
-module go-secure-proxy
+module go-http-proxy
 
 go 1.15
 

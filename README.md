@@ -1,1 +1,1 @@
-# Go Secure Proxy
+# Go HTTP Proxy
