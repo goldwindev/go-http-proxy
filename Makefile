@@ -42,6 +42,12 @@ run:
 watch:
 	$(NODEMON_BIN) -e go -x 'go run -race . || exit 1'
 
+pi: export GOARCH=arm
+pi: export GOARM=6
+pi: export CGO_ENABLED=0
+pi:
+	GOOS=linux GOARCH=${GOARCH} GOARM=${GOARM} CGO_ENABLED=0 go build ${LDFLAGS} -o ${BIN_DIR}/${BINARY}-linux-${GOARCH}-${GOARM} .
+
 linux:
 	GOOS=linux GOARCH=${GOARCH} go build ${LDFLAGS} -o ${BIN_DIR}/${BINARY}-linux-${GOARCH} .
 

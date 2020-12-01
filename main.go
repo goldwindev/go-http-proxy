@@ -2,12 +2,13 @@ package main
 
 import (
 	"crypto/tls"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
 	"os"
 
+	"github.com/alexcesaro/log"
+	"github.com/alexcesaro/log/stdlog"
 	"github.com/joho/godotenv"
 )
 
@@ -19,38 +20,56 @@ func getEnv(key, fallback string) string {
 	return fallback
 }
 
-// Get the port to listen on
-func getListenAddress() string {
-	return ":" + getEnv("PORT", "1337")
-}
-
-// Get the URL to redirect to
-func getProxyURL() string {
-	return getEnv("PROXY_URL", "127.0.0.1:31337")
-}
-
-// Get the URL to redirect to
-func shouldUseTLS() bool {
-	return getEnv("USE_TLS", "") != ""
-}
-
 // Log the typeform payload and redirect url
 func logRequestPayload(proxyUrl string, req *http.Request) {
-	log.Printf("Origin: %s | Path: %s | Headers: %#v\n", proxyUrl, req.URL.String(), req.Header)
+	Logger.Infof("Origin: %s | Path: %s", proxyUrl, req.URL.String())
 }
 
 // Log the env variables required for a reverse proxy
 func logSetup() {
-	log.Printf("Server Listening on: %s\n", getListenAddress())
-	log.Printf("Redirecting to url: %s\n", getProxyURL())
+	proto := "HTTP"
+	if ShouldUseTLS {
+		proto = "HTTPS"
+	}
+
+	Logger.Infof("%s Server Listening on: %s", proto, ListenAddress)
+	Logger.Infof("Redirecting to url: %s", ProxyURL)
 }
 
 // Serve a reverse proxy for a given url
 func serveReverseProxy(target string, res http.ResponseWriter, req *http.Request) {
-	url, _ := url.Parse(target)
+	url, err := url.Parse(target)
+	if err != nil {
+		Logger.Error(err)
+		return
+	}
 
 	// create the reverse proxy
 	proxy := httputil.NewSingleHostReverseProxy(url)
+
+	proxy.Director = func(r *http.Request) {
+		b, err := httputil.DumpRequest(r, true)
+		if err != nil {
+			Logger.Error(err)
+			return
+		}
+		Logger.Debug("==============REQUEST_START=============")
+		Logger.Debug(string(b))
+		Logger.Debug("===============REQUEST_END==============")
+	}
+
+	proxy.ModifyResponse = func(r *http.Response) error {
+		b, err := httputil.DumpResponse(r, true)
+		if err != nil {
+			Logger.Error(err)
+			return err
+		}
+		Logger.Debug("=============RESPONSE_START=============")
+		Logger.Debug(string(b))
+		Logger.Debug("==============RESPONSE_END==============")
+
+		return nil
+	}
 
 	// Update the headers to allow for SSL redirection
 	req.URL.Host = url.Host
@@ -63,7 +82,7 @@ func serveReverseProxy(target string, res http.ResponseWriter, req *http.Request
 
 // Given a request send it to the appropriate url
 func handleRequestAndRedirect(res http.ResponseWriter, req *http.Request) {
-	url := getProxyURL()
+	url := ProxyURL
 
 	logRequestPayload(url, req)
 
@@ -72,13 +91,14 @@ func handleRequestAndRedirect(res http.ResponseWriter, req *http.Request) {
 
 func createServer() *http.Server {
 	s := &http.Server{
-		Addr:    getListenAddress(),
+		Addr:    ListenAddress,
 		Handler: nil, // use `http.DefaultServeMux`
 	}
 
-	if shouldUseTLS() {
+	if ShouldUseTLS {
 		// generate a `Certificate` struct
-		cert, _ := tls.LoadX509KeyPair(getEnv("SSL_CERT", ""), getEnv("SSL_KEY", ""))
+		cert, _ := tls.LoadX509KeyPair(SSLCert, SSLKey)
+		Logger.Infof("Loaded X509 KeyPair (%s / %s)", SSLCert, SSLKey)
 
 		// create a custom server with `TLSConfig`
 		s.TLSConfig = &tls.Config{
@@ -89,20 +109,44 @@ func createServer() *http.Server {
 	return s
 }
 
-func main() {
+var (
+	ListenAddress string
+	ProxyURL      string
+	ShouldUseTLS  bool
+	SSLCert       string
+	SSLKey        string
+	LogLevel      int
+	Logger        log.Logger
+)
+
+func init() {
+	Logger = stdlog.GetFromFlags()
+
 	// load env vars from .env file if exists, else rely on system vars or defaults
-	godotenv.Load()
+	err := godotenv.Load()
+	if err != nil {
+		Logger.Warning("Failed to load .env file")
+	}
+
+	ListenAddress = ":" + getEnv("PORT", "1337")
+	ProxyURL = getEnv("PROXY_URL", "http://127.0.0.1:31337")
+	ShouldUseTLS = getEnv("USE_TLS", "") == "true"
+	SSLCert = getEnv("SSL_CERT", "")
+	SSLKey = getEnv("SSL_KEY", "")
+}
+
+func main() {
+	// Configure server
+	http.HandleFunc("/", handleRequestAndRedirect)
+	s := createServer()
 
 	// Log setup values
 	logSetup()
 
-	// start server
-	http.HandleFunc("/", handleRequestAndRedirect)
-
-	s := createServer()
-	if shouldUseTLS() {
-		log.Fatal(s.ListenAndServeTLS("", ""))
+	// Start server
+	if ShouldUseTLS {
+		Logger.Error(s.ListenAndServeTLS("", ""))
 	} else {
-		log.Fatal(s.ListenAndServe())
+		Logger.Error(s.ListenAndServe())
 	}
 }

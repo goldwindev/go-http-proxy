@@ -1,2 +1,4 @@
+github.com/alexcesaro/log v0.0.0-20150915221235-61e686294e58 h1:MkpmYfld/S8kXqTYI68DfL8/hHXjHogL120Dy00TIxc=
+github.com/alexcesaro/log v0.0.0-20150915221235-61e686294e58/go.mod h1:YNfsMyWSs+h+PaYkxGeMVmVCX75Zj/pqdjbu12ciCYE=
 github.com/joho/godotenv v1.3.0 h1:Zjp+RcGpHhGlrMbJzXTrZZPrWj+1vfm90La1wgB6Bhc=
 github.com/joho/godotenv v1.3.0/go.mod h1:7hK45KPybAkOC6peb+G5yklZfMxEjkZhHbwpqxOKXbg=
