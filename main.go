@@ -6,10 +6,14 @@ import (
 	"net/http/httputil"
 	"net/url"
 	"os"
+	"strings"
 
 	"github.com/alexcesaro/log"
 	"github.com/alexcesaro/log/stdlog"
+	"github.com/gorilla/websocket"
 	"github.com/joho/godotenv"
+
+	"github.com/koding/websocketproxy"
 )
 
 // Get env var or default
@@ -54,7 +58,7 @@ func serveReverseProxy(target string, res http.ResponseWriter, req *http.Request
 			return
 		}
 		Logger.Debug("==============REQUEST_START=============")
-		Logger.Debug(string(b))
+		Logger.Debug("\n" + string(b))
 		Logger.Debug("===============REQUEST_END==============")
 	}
 
@@ -65,19 +69,40 @@ func serveReverseProxy(target string, res http.ResponseWriter, req *http.Request
 			return err
 		}
 		Logger.Debug("=============RESPONSE_START=============")
-		Logger.Debug(string(b))
+		Logger.Debug("\n" + string(b))
 		Logger.Debug("==============RESPONSE_END==============")
 
 		return nil
 	}
 
+	isWebsocket := req.Header.Get("Connection") == "Upgrade"
+	var wsProxy *websocketproxy.WebsocketProxy
+	if isWebsocket {
+		url.Scheme = strings.Replace(url.Scheme, "http", "ws", 1) // http(s) -> ws(s)
+		wsProxy = websocketproxy.NewProxy(url)
+		wsProxy.Upgrader = &websocket.Upgrader{
+			ReadBufferSize:  1024,
+			WriteBufferSize: 1024,
+			CheckOrigin: func(r *http.Request) bool {
+				return true
+			},
+		}
+	}
+
 	// Update the headers to allow for SSL redirection
 	req.URL.Host = url.Host
 	req.URL.Scheme = url.Scheme
-	req.Header.Set("X-Forwarded-Host", req.Header.Get("Host"))
+	forwardedHost := req.Header.Get("Host")
+	if forwardedHost != "" {
+		req.Header.Set("X-Forwarded-Host", forwardedHost)
+	}
 	req.Host = url.Host
 
-	proxy.ServeHTTP(res, req)
+	if isWebsocket {
+		wsProxy.ServeHTTP(res, req)
+	} else {
+		proxy.ServeHTTP(res, req)
+	}
 }
 
 // Given a request send it to the appropriate url
