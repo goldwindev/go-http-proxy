@@ -1,5 +1,5 @@
 BINARY=$(shell pwd | sed -e "s/.*\///")
-GOARCH=amd64
+GOARCH=arm64
 UNAME=$(shell uname -s)
 
 VERSION?=?

@@ -9,11 +9,11 @@ RUN \
 WORKDIR /go/src/go-http-proxy
 COPY . .
 
-RUN make build
+RUN make linux
 
-FROM alpine:latest
+FROM arm64v8/alpine:latest
 
 WORKDIR /tmp/
-COPY --from=builder /go/src/go-http-proxy/bin/go-http-proxy-linux-amd64 /tmp/
+COPY --from=builder /go/src/go-http-proxy/bin/go-http-proxy-linux-arm64 /tmp/
 
-CMD ["/tmp/go-http-proxy-linux-amd64"]
+CMD ["/tmp/go-http-proxy-linux-arm64"]
